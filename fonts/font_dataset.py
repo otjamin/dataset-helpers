@@ -8,7 +8,29 @@ MAX_CHARS_PER_LINE = 22
 PADDING = 100
 
 text_content = [
-    "The quick brown fox jumps over the lazy dog.",
+    "ABCDEFGHIJK",
+    "LMNOPQRSTUV",
+    "WXYZ",
+    "abcdefghijk",
+    "lmnopqrstuv",
+    "wxyz",
+    "0123456789",
+    "Ä Ö Ü ä ö ü ß",
+    ". , : ; - _",
+    "€ @ & ! ? % # +",
+    "A. B, C: D;",
+    "(123) [456] \{789\}",
+    "Franz jagt im komplett verwahrlosten Taxi quer durch Bayern",
+    "Vogel Quax zwickt Johnys Pferd Bim",
+    "Heizölrückstoßabdämpfung",
+    "The quick brown fox jumps over the lazy dog",
+    "Sphinx of black quartz judge my vow",
+    "Typografie",
+    "Berlin, Germany.",
+    "Hamburgefonts",
+    "Kaffee & Kuchen",
+    "Flux.1 Model",
+    "ACHTUNG!",
 ]
 
 
@@ -31,7 +53,7 @@ def get_fitted_font_and_text(
             bbox = draw.textbbox((0, 0), wrapped_text, font=font)
         else:
             bbox = font.getbbox(wrapped_text)
-        print(bbox)
+
         text_width = bbox[2] - bbox[0]
         text_height = bbox[3] - bbox[1]
 
