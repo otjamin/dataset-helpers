@@ -1,68 +1,106 @@
 import argparse
 import textwrap
+from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
-IMAGE_SIZE = (1024, 1024)
-BACKGROUND_COLOR = (255, 255, 255)
-TEXT_COLOR = (0, 0, 0)
+IMG_SIZE = 1024
+MAX_CHARS_PER_LINE = 22
+PADDING = 100
 
-DESCRIPTION_TEMPLATE = "{}, text saying \"{}\""
-
-TEST_TEXT = "Größe: 176cm, Gewicht: 78kg, Preis: $99.99 (Sonderangebot!)"
-
-FULL_ALPHABET = (
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÜ"
-    "abcdefghijklmnopqrstuvwxyzäöüß"
-    "0123456789"
-    "!\"$%&?@€#,.:;'()/+-"
-)
-
-SAMPLE_WORDS = (
-    "Hallo", "Welt", "Fähigkeit", "Überraschung", "Straße",
-    "Python3", "Programmierung", "Datenanalyse", "Künstliche"
-)
-
-SAMPLE_TEXTS = (
+text_content = [
     "The quick brown fox jumps over the lazy dog.",
-    "Pack my box with five dozen liquor jugs.",
-    "How vexingly quick daft zebras jump!",
-    "Sphinx of black quartz, judge my vow.",
-    "Äpfel, Öl & Übung: Das kostet 42€ + 15% = 48,30€.",
-    "Test123: 50% off! Call @555-7890 or visit example.com/shop.",
-    "Größe: 176cm, Gewicht: 78kg, Preis: $99.99 (Sonderangebot!)",
-    "Franz jagt im komplett verwahrlosten Taxi quer durch Bayern."
-)
+]
 
-def calc_font_size(letter_count, image_width, target_coverage=1.1):
-    base_size = image_width // letter_count
-    return int(base_size * target_coverage)
 
-def split_text_into_lines(text, max_line_length=28):
-    return textwrap.fill(text, width=max_line_length)
+def get_fitted_font_and_text(
+    text: str,
+    font_path: str,
+    max_width: int,
+    max_height: int,
+    draw: ImageDraw.ImageDraw = None,
+) -> tuple[ImageFont.FreeTypeFont, str]:
+    wrapped_text = textwrap.fill(text, width=MAX_CHARS_PER_LINE)
 
-def draw_test(font_file):
-    img = Image.new("RGB", IMAGE_SIZE, BACKGROUND_COLOR)
-    w, h = img.size
+    font_size = 576
+    min_size = 16
 
-    text = split_text_into_lines(TEST_TEXT)
+    font = ImageFont.truetype(font_path, font_size)
 
-    fnt_size = calc_font_size(len(text.split("\n")[0]), w)
-    fnt = ImageFont.truetype(font_file, fnt_size)
-    
-    d = ImageDraw.Draw(img)
+    while font_size > min_size:
+        if draw:
+            bbox = draw.textbbox((0, 0), wrapped_text, font=font)
+        else:
+            bbox = font.getbbox(wrapped_text)
+        print(bbox)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
 
-    d.text((w//2, h//2), text, font=fnt, fill=TEXT_COLOR, anchor="mm")
+        if text_width < max_width and text_height < max_height:
+            return font, wrapped_text
 
-    img.show()
+        font_size -= 16
+        font = ImageFont.truetype(font_path, font_size)
 
-def create_font_dataset(font_file, trigger_word):
-    draw_test(font_file)
-    pass
+    return font, wrapped_text
+
+
+def create_dataset_image(
+    text: str,
+    font_path: str,
+    color: tuple[int, int, int] = (0, 0, 0),
+    background: tuple[int, int, int] = (255, 255, 255),
+    invert_colors: bool = False,
+) -> Image.Image:
+    image = Image.new(
+        "RGB", (IMG_SIZE, IMG_SIZE), background if not invert_colors else color
+    )
+    d = ImageDraw.Draw(image)
+
+    max_w = IMG_SIZE - 2 * PADDING
+    max_h = max_w
+    font, fitted_text = get_fitted_font_and_text(text, font_path, max_w, max_h, d)
+
+    d.text(
+        (IMG_SIZE // 2, IMG_SIZE // 2),
+        fitted_text,
+        font=font,
+        fill=color if not invert_colors else background,
+        anchor="mm",
+    )
+
+    caption = (
+        f'[trigger], text saying "{text}", text color '
+        + "#%02x%02x%02x" % (color if not invert_colors else background)
+        + ", background color "
+        + "#%02x%02x%02x" % (background if not invert_colors else color)
+    )
+
+    return image, caption
+
+
+def generate_dataset(font_path: str):
+    font_name = Path(font_path).stem
+    output_dir = Path("datasets") / font_name
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    for i, text in enumerate(text_content):
+        img, cap = create_dataset_image(text, font_path)
+        img.save(output_dir / f"{font_name}_{i}.png")
+
+        with open(output_dir / f"{font_name}_{i}.txt", "w") as f:
+            f.write(cap)
+
+    for i, text in enumerate(text_content):
+        img, cap = create_dataset_image(text, font_path, invert_colors=True)
+        img.save(output_dir / f"{font_name}_{i}i.png")
+
+        with open(output_dir / f"{font_name}_{i}i.txt", "w") as f:
+            f.write(cap)
+
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Create font dataset.")
+    parser = argparse.ArgumentParser(description="Generate font dataset.")
     parser.add_argument("font_file", type=str, help="Path to the ttf font file.")
-    parser.add_argument("--trigger-word", "-t", type=str, default="[trigger]", help="Trigger word for the font.")
     args = parser.parse_args()
 
-    create_font_dataset(args.font_file, args.trigger_word)
+    generate_dataset(args.font_file)
