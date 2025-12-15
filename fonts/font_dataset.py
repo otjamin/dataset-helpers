@@ -19,7 +19,7 @@ text_content = [
     ". , : ; - _",
     "€ @ & ! ? % # +",
     "A. B, C: D;",
-    "(123) [456] \{789\}",
+    "(123) [456] {789}",
     "Franz jagt im komplett verwahrlosten Taxi quer durch Bayern",
     "Vogel Quax zwickt Johnys Pferd Bim",
     "Heizölrückstoßabdämpfung",
@@ -109,14 +109,14 @@ def generate_dataset(font_path: str):
         img, cap = create_dataset_image(text, font_path)
         img.save(output_dir / f"{font_name}_{i}.png")
 
-        with open(output_dir / f"{font_name}_{i}.txt", "w") as f:
+        with open(output_dir / f"{font_name}_{i}.txt", "w", encoding="utf-8") as f:
             f.write(cap)
 
     for i, text in enumerate(text_content):
         img, cap = create_dataset_image(text, font_path, invert_colors=True)
         img.save(output_dir / f"{font_name}_{i}i.png")
 
-        with open(output_dir / f"{font_name}_{i}i.txt", "w") as f:
+        with open(output_dir / f"{font_name}_{i}i.txt", "w", encoding="utf-8") as f:
             f.write(cap)
 
 
